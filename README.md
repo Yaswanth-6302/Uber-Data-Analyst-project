@@ -104,9 +104,8 @@ Some important insights discovered during analysis include:
 
 # 📈 Dashboard Preview
 
-_Add your dashboard screenshot here_
+<img width="1919" height="924" alt="Screenshot 2026-05-24 172101" src="https://github.com/user-attachments/assets/906781ee-baec-457b-afab-7f035c4615b7" />
 
-![Dashboard Preview](screenshots/dashboard_preview.png)
 
 ---
 
@@ -166,8 +165,8 @@ Contributions and suggestions are welcome. Feel free to fork the repository and 
 
 # 📬 Contact
 
-- GitHub: https://github.com/your-username
-- LinkedIn: https://linkedin.com/in/your-profile
+- GitHub: https://github.com/Yaswanth-6302/Uber-Data-Analyst-project
+- LinkedIn: https://www.linkedin.com/in/yashwanth-reddy-bandi-b2388b25a/
 
 ---
 
