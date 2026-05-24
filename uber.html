@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise BI Analytics Dashboard</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #0b0e14;
+            --card-bg: #161b22;
+            --accent: #3b82f6;
+            --text-main: #e6edf3;
+        }
+        body { background-color: var(--bg-dark); color: var(--text-main); font-family: 'Inter', sans-serif; }
+        .sidebar { background-color: var(--card-bg); border-right: 1px solid #30363d; width: 240px; }
+        .card { background-color: var(--card-bg); border: 1px solid #30363d; border-radius: 8px; transition: transform 0.2s; }
+        .card:hover { border-color: var(--accent); }
+        .chart-container { height: 350px; width: 100%; }
+        .dataTables_wrapper { color: #8b949e !important; padding: 1rem; }
+        table.dataTable { background-color: var(--card-bg) !important; color: var(--text-main) !important; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
+        input[type="file"]::file-selector-button {
+            background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="sidebar flex flex-col h-full z-20">
+        <div class="p-6 text-xl font-bold border-b border-gray-800 flex items-center gap-2">
+            <i class="fas fa-chart-line text-blue-500"></i> BI Analytics
+        </div>
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
+            <button onclick="switchTab('overview')" class="w-full text-left p-3 rounded hover:bg-gray-800 flex items-center gap-3 active-tab" id="btn-overview">
+                <i class="fas fa-th-large"></i> Overview
+            </button>
+            <button onclick="switchTab('trends')" class="w-full text-left p-3 rounded hover:bg-gray-800 flex items-center gap-3" id="btn-trends">
+                <i class="fas fa-chart-area"></i> Trend Analysis
+            </button>
+            <button onclick="switchTab('performance')" class="w-full text-left p-3 rounded hover:bg-gray-800 flex items-center gap-3" id="btn-performance">
+                <i class="fas fa-bolt"></i> Driver Performance
+            </button>
+            <button onclick="switchTab('raw-data')" class="w-full text-left p-3 rounded hover:bg-gray-800 flex items-center gap-3" id="btn-raw-data">
+                <i class="fas fa-table"></i> Data Explorer
+            </button>
+            
+            <div class="pt-6 mt-6 border-t border-gray-800">
+                <p class="text-xs text-gray-500 uppercase mb-4">Slicers & Filters</p>
+                <div id="filters-container" class="space-y-4">
+                    <!-- Dynamic filters injected here -->
+                    <p class="text-xs italic text-gray-600">Upload data to see filters</p>
+                </div>
+            </div>
+        </nav>
+        <div class="p-4 border-t border-gray-800">
+            <input type="file" id="fileInput" class="text-xs w-full" accept=".csv, .xlsx">
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0 bg-black/20">
+        <!-- Top Bar -->
+        <header class="h-16 flex items-center justify-between px-8 bg-[#161b22] border-b border-gray-800">
+            <h2 id="page-title" class="text-lg font-semibold">Executive Dashboard</h2>
+            <div class="flex gap-4">
+                <button onclick="exportData()" class="px-4 py-2 bg-gray-800 rounded text-sm hover:bg-gray-700">Export CSV</button>
+            </div>
+        </header>
+
+        <!-- Dynamic Content Area -->
+        <div id="dashboard-content" class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            
+            <!-- KPI Cards Row -->
+            <div id="kpi-row" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+                <!-- Initial Placeholder -->
+                <div class="card p-6 flex flex-col items-center justify-center text-gray-500 italic">
+                    Upload data to start
+                </div>
+            </div>
+
+            <!-- Tab: Overview -->
+            <div id="tab-overview" class="tab-pane">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="card p-4">
+                        <h3 class="text-sm font-medium mb-4 text-gray-400 uppercase">Booking Status Distribution</h3>
+                        <div id="chart-status" class="chart-container"></div>
+                    </div>
+                    <div class="card p-4">
+                        <h3 class="text-sm font-medium mb-4 text-gray-400 uppercase">Revenue by Vehicle Type</h3>
+                        <div id="chart-vehicle" class="chart-container"></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="card p-4 lg:col-span-2">
+                        <h3 class="text-sm font-medium mb-4 text-gray-400 uppercase">Daily Booking Trends</h3>
+                        <div id="chart-main-line" class="chart-container"></div>
+                    </div>
+                    <div class="card p-4">
+                        <h3 class="text-sm font-medium mb-4 text-gray-400 uppercase">Cancellation Reasons</h3>
+                        <div id="chart-cancel-reason" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Trends -->
+            <div id="tab-trends" class="tab-pane hidden">
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-4">
+                        <h3 class="text-sm font-medium mb-4 text-gray-400 uppercase">VTAT vs CTAT Analysis (Efficiency)</h3>
+                        <div id="chart-tat" class="chart-container" style="height: 500px;"></div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="card p-4">
+                            <h3 class="text-sm font-medium mb-4 text-gray-400 uppercase">Payment Method Popularity</h3>
+                            <div id="chart-payment" class="chart-container"></div>
+                        </div>
+                        <div class="card p-4">
+                            <h3 class="text-sm font-medium mb-4 text-gray-400 uppercase">Distance vs Booking Value</h3>
+                            <div id="chart-scatter" class="chart-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Performance -->
+            <div id="tab-performance" class="tab-pane hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="card p-4">
+                        <h3 class="text-sm font-medium mb-4 text-gray-400 uppercase">Top 10 High-Value Customers</h3>
+                        <div id="chart-top-cust" class="chart-container"></div>
+                    </div>
+                    <div class="card p-4">
+                        <h3 class="text-sm font-medium mb-4 text-gray-400 uppercase">Rating Distribution (Driver vs Customer)</h3>
+                        <div id="chart-radar" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Data Table -->
+            <div id="tab-raw-data" class="tab-pane hidden">
+                <div class="card p-4 overflow-x-auto">
+                    <table id="mainTable" class="display nowrap w-full text-sm"></table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        let rawData = [];
+        let filteredData = [];
+        let charts = {};
+        const chartsRegistry = ['chart-status', 'chart-vehicle', 'chart-main-line', 'chart-cancel-reason', 'chart-tat', 'chart-payment', 'chart-scatter', 'chart-top-cust', 'chart-radar'];
+
+        // --- Core Logic ---
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            if (file.name.endsWith('.csv')) {
+                Papa.parse(file, {
+                    header: true,
+                    dynamicTyping: true,
+                    skipEmptyLines: true,
+                    complete: (results) => initDashboard(results.data)
+                });
+            } else {
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    initDashboard(XLSX.utils.sheet_to_json(sheet));
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+
+        function initDashboard(data) {
+            rawData = data;
+            filteredData = [...data];
+            
+            // Auto-detect columns and generate filters
+            createFilters();
+            updateAll();
+            initDataTable();
+        }
+
+        function updateAll() {
+            calculateKPIs();
+            renderCharts();
+        }
+
+        // --- Filter Logic ---
+
+        function createFilters() {
+            const container = document.getElementById('filters-container');
+            container.innerHTML = '';
+            
+            const columnsToFilter = ['Booking Status', 'Vehicle Type', 'Payment Method'];
+            
+            columnsToFilter.forEach(col => {
+                if (rawData[0] && rawData[0].hasOwnProperty(col)) {
+                    const values = [...new Set(rawData.map(item => item[col]))].filter(Boolean);
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <label class="text-xs text-gray-400 block mb-1">${col}</label>
+                        <select onchange="applyFilter('${col}', this.value)" class="w-full bg-gray-800 border border-gray-700 text-xs p-2 rounded">
+                            <option value="All">All</option>
+                            ${values.map(v => `<option value="${v}">${v}</option>`).join('')}
+                        </select>
+                    `;
+                    container.appendChild(div);
+                }
+            });
+        }
+
+        let activeFilters = {};
+        function applyFilter(column, value) {
+            if (value === "All") delete activeFilters[column];
+            else activeFilters[column] = value;
+            
+            filteredData = rawData.filter(row => {
+                return Object.keys(activeFilters).every(key => row[key] == activeFilters[key]);
+            });
+            updateAll();
+        }
+
+        // --- KPI Logic ---
+
+        function calculateKPIs() {
+            const container = document.getElementById('kpi-row');
+            const totalBookings = filteredData.length;
+            const revenue = filteredData.reduce((acc, curr) => acc + (Number(curr['Booking Value']) || 0), 0);
+            const avgDistance = filteredData.reduce((acc, curr) => acc + (Number(curr['Ride Distance']) || 0), 0) / (totalBookings || 1);
+            const cancelRate = (filteredData.filter(d => d['Booking Status'] === 'Cancelled').length / (totalBookings || 1) * 100).toFixed(1);
+            const avgRating = (filteredData.reduce((acc, curr) => acc + (Number(curr['Driver Ratings']) || 0), 0) / (totalBookings || 1)).toFixed(1);
+
+            const kpis = [
+                { label: 'Total Bookings', val: totalBookings.toLocaleString(), icon: 'fa-ticket-alt', color: 'text-blue-500' },
+                { label: 'Total Revenue', val: '$' + revenue.toLocaleString(), icon: 'fa-dollar-sign', color: 'text-green-500' },
+                { label: 'Avg Distance', val: avgDistance.toFixed(2) + ' km', icon: 'fa-route', color: 'text-purple-500' },
+                { label: 'Cancel Rate', val: cancelRate + '%', icon: 'fa-ban', color: 'text-red-500' },
+                { label: 'Avg Driver Rating', val: avgRating + ' ★', icon: 'fa-star', color: 'text-yellow-500' }
+            ];
+
+            container.innerHTML = kpis.map(k => `
+                <div class="card p-6">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase font-bold">${k.label}</p>
+                            <h3 class="text-2xl font-bold mt-1">${k.val}</h3>
+                        </div>
+                        <i class="fas ${k.icon} ${k.color} text-xl"></i>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- Charting Logic ---
+
+        function renderCharts() {
+            chartsRegistry.forEach(id => {
+                if (charts[id]) charts[id].dispose();
+                charts[id] = echarts.init(document.getElementById(id), 'dark');
+            });
+
+            // 1. Status Pie
+            const statusMap = countOccurrences(filteredData, 'Booking Status');
+            charts['chart-status'].setOption(getPieOption('Booking Status', statusMap));
+
+            // 2. Vehicle Bar
+            const vehicleMap = sumBy(filteredData, 'Vehicle Type', 'Booking Value');
+            charts['chart-vehicle'].setOption(getBarOption('Revenue by Vehicle', vehicleMap, '#3b82f6'));
+
+            // 3. Daily Trend Line
+            const dateMap = countOccurrences(filteredData, 'Date Time'); // Simplified grouping
+            charts['chart-main-line'].setOption(getLineOption('Daily Volume', dateMap));
+
+            // 4. Cancellation Reason Donut
+            const cancelMap = countOccurrences(filteredData, 'Reason for cancelling by Customer');
+            charts['chart-cancel-reason'].setOption(getPieOption('Cancel Reasons', cancelMap, true));
+
+            // 5. VTAT vs CTAT Comparison
+            const tatData = aggregateTAT(filteredData);
+            charts['chart-tat'].setOption({
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['Avg VTAT', 'Avg CTAT'] },
+                xAxis: { type: 'category', data: tatData.labels },
+                yAxis: { type: 'value' },
+                series: [
+                    { name: 'Avg VTAT', type: 'line', smooth: true, data: tatData.vtat, color: '#60a5fa' },
+                    { name: 'Avg CTAT', type: 'line', smooth: true, data: tatData.ctat, color: '#f87171' }
+                ]
+            });
+
+            // 6. Payment Radar/Pie
+            const payMap = countOccurrences(filteredData, 'Payment Method');
+            charts['chart-payment'].setOption(getPieOption('Payments', payMap));
+
+            // 7. Distance vs Value Scatter
+            const scatterData = filteredData.map(d => [d['Ride Distance'], d['Booking Value']]);
+            charts['chart-scatter'].setOption({
+                tooltip: { trigger: 'item' },
+                xAxis: { name: 'Distance' },
+                yAxis: { name: 'Value' },
+                series: [{ type: 'scatter', data: scatterData, symbolSize: 8, color: '#10b981' }]
+            });
+
+            // 8. Top Customers
+            const topCust = sumBy(filteredData, 'Customer ID', 'Booking Value', 10);
+            charts['chart-top-cust'].setOption(getBarOption('Top 10 Customers', topCust, '#a855f7', true));
+
+            // 9. Ratings Radar
+            charts['chart-radar'].setOption({
+                radar: {
+                    indicator: [
+                        { name: 'Driver Rating', max: 5 },
+                        { name: 'Customer Rating', max: 5 }
+                    ]
+                },
+                series: [{
+                    type: 'radar',
+                    data: [{
+                        value: [
+                            avg(filteredData, 'Driver Ratings'),
+                            avg(filteredData, 'Customer Rating')
+                        ],
+                        name: 'Avg Ratings',
+                        areaStyle: { color: 'rgba(59, 130, 246, 0.5)' }
+                    }]
+                }]
+            });
+        }
+
+        // --- Helpers ---
+
+        function countOccurrences(data, key) {
+            return data.reduce((acc, curr) => {
+                const val = curr[key] || 'Unknown';
+                acc[val] = (acc[val] || 0) + 1;
+                return acc;
+            }, {});
+        }
+
+        function sumBy(data, groupKey, sumKey, limit = null) {
+            const map = data.reduce((acc, curr) => {
+                const group = curr[groupKey] || 'Unknown';
+                acc[group] = (acc[group] || 0) + (Number(curr[sumKey]) || 0);
+                return acc;
+            }, {});
+            
+            if (limit) {
+                return Object.fromEntries(Object.entries(map).sort((a,b) => b[1]-a[1]).slice(0, limit));
+            }
+            return map;
+        }
+
+        function avg(data, key) {
+            const valid = data.filter(d => !isNaN(d[key]));
+            return valid.length ? (valid.reduce((a,b) => a + Number(b[key]), 0) / valid.length) : 0;
+        }
+
+        function aggregateTAT(data) {
+            const labels = [...new Set(data.map(d => String(d['Date Time']).split(' ')[0]))].sort().slice(-15);
+            const vtat = labels.map(l => avg(data.filter(d => String(d['Date Time']).startsWith(l)), 'Avg VTAT'));
+            const ctat = labels.map(l => avg(data.filter(d => String(d['Date Time']).startsWith(l)), 'Avg CTAT'));
+            return { labels, vtat, ctat };
+        }
+
+        function getPieOption(name, dataMap, isDonut = false) {
+            return {
+                tooltip: { trigger: 'item' },
+                series: [{
+                    name: name,
+                    type: 'pie',
+                    radius: isDonut ? ['40%', '70%'] : '70%',
+                    data: Object.entries(dataMap).map(([name, value]) => ({ name, value })),
+                    emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' } }
+                }]
+            };
+        }
+
+        function getBarOption(name, dataMap, color, horizontal = false) {
+            const entries = Object.entries(dataMap);
+            return {
+                tooltip: { trigger: 'axis' },
+                xAxis: horizontal ? { type: 'value' } : { type: 'category', data: entries.map(e => e[0]), axisLabel: { rotate: 45 } },
+                yAxis: horizontal ? { type: 'category', data: entries.map(e => e[0]) } : { type: 'value' },
+                series: [{
+                    data: entries.map(e => e[1]),
+                    type: 'bar',
+                    itemStyle: { color: color },
+                    showBackground: true,
+                    backgroundStyle: { color: 'rgba(180, 180, 180, 0.1)' }
+                }]
+            };
+        }
+
+        function getLineOption(name, dataMap) {
+            const entries = Object.entries(dataMap).sort();
+            return {
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: entries.map(e => e[0]) },
+                yAxis: { type: 'value' },
+                series: [{
+                    data: entries.map(e => e[1]),
+                    type: 'line',
+                    smooth: true,
+                    areaStyle: { opacity: 0.2 },
+                    itemStyle: { color: '#3b82f6' }
+                }]
+            };
+        }
+
+        // --- Navigation ---
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            
+            document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('bg-gray-800', 'text-blue-400'));
+            document.getElementById(`btn-${tabId}`).classList.add('bg-gray-800', 'text-blue-400');
+            
+            document.getElementById('page-title').innerText = tabId.replace('-', ' ').toUpperCase();
+            
+            // Resize charts to fit new visibility
+            setTimeout(() => {
+                Object.values(charts).forEach(c => c.resize());
+            }, 100);
+        }
+
+        function initDataTable() {
+            if ($.fn.DataTable.isDataTable('#mainTable')) {
+                $('#mainTable').DataTable().destroy();
+            }
+            
+            const columns = Object.keys(rawData[0] || {}).map(key => ({ title: key, data: key }));
+            
+            $('#mainTable').DataTable({
+                data: rawData,
+                columns: columns,
+                pageLength: 10,
+                scrollX: true,
+                dom: 'Bfrtip',
+                theme: 'dark'
+            });
+        }
+
+        function exportData() {
+            const csv = Papa.unparse(filteredData);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", "filtered_analytics.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        window.addEventListener('resize', () => {
+            Object.values(charts).forEach(c => c.resize());
+        });
+
+    </script>
+</body>
+</html>
