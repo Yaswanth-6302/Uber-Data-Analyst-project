@@ -104,8 +104,8 @@ Some important insights discovered during analysis include:
 
 # 📈 Dashboard Preview
 
-<img width="1919" height="924" alt="Screenshot 2026-05-24 172101" src="https://github.com/user-attachments/assets/906781ee-baec-457b-afab-7f035c4615b7" />
-
+https://1drv.ms/i/c/494203bcdc739077/IQBRJwKag42fR7ow1CKzrg5XAYmXpxU1_qtWU4plik3kA-Y?e=lwD9Gw
+https://1drv.ms/i/c/494203bcdc739077/IQC5RKVbvi0kQ6AyflsAMJKYAbv6jT__vW_WUfqTgVNc79I?e=XBuQru
 
 ---
 
